@@ -91,6 +91,30 @@ func GetPostsMeta(db *sql.DB, postId int) ([]models.Meta, error) {
 
 }
 
+func GetPostbyName(db *sql.DB, post_name string) ([]models.Post, error) {
+	query := `select * from wp_posts where post_name = ?`
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	stmt, err := db.PrepareContext(ctx, query)
+	if err != nil {
+		log.Printf("Error %s when preparing SQL statement", err)
+		return []models.Post{}, err
+	}
+	defer stmt.Close()
+	row, err := stmt.QueryContext(ctx, post_name)
+	if err != nil {
+		return []models.Post{}, err
+	}
+	defer row.Close()
+	var post = models.Post{}
+
+	if err := row.Scan(&post.Id, &post.Post_title, &post.Post_name); err != nil {
+		return []models.Post{}, err
+	}
+	return []models.Post{}, nil
+
+}
+
 func main() {
 	db, err := sql.Open("mysql", dsn(""))
 
@@ -151,20 +175,34 @@ func main() {
 		return
 	}
 	for _, post := range posts {
-		var postId = big.NewInt(post.Id).String()
 
-		// log.Printf("ID : %q Post Title: %s Post Name: %d", postId, post.Post_name, post.Post_title)
+		log.Printf("Post Title: %s Post Name: %d", post.Post_name, post.Post_title)
 
-		post_meta, err := GetPostsMeta(db, int(post.Id))
+		posts_ds, err := GetPostbyName(db_ds, "cara-freeze-kolom-dan-baris-pertama-microsoft-excel")
 
 		if err != nil {
-			log.Printf("Error %s when selecting post meta", err)
+			log.Printf("Error %s when selecting post", err)
 			return
 		}
 
-		for _, meta := range post_meta {
-			log.Printf("post id : %s, meta key : %q, Meta Value : %p", postId, meta.Meta_key, &meta.Meta_value)
+		for _, post_ds := range posts_ds {
+
+			var postId = big.NewInt(post_ds.Id).String()
+			log.Printf("ID : %q Post Title: %s Post Name: %d", postId, post_ds.Post_name, post_ds.Post_title)
 		}
+
+		// log.Printf("ID : %q Post Title: %s Post Name: %d", postId, post.Post_name, post.Post_title)
+
+		// post_meta, err := GetPostsMeta(db, int(post.Id))
+
+		// if err != nil {
+		// 	log.Printf("Error %s when selecting post meta", err)
+		// 	return
+		// }
+
+		// for _, meta := range post_meta {
+		// 	log.Printf("post id : %s, meta key : %q, Meta Value : %p", postId, meta.Meta_key, &meta.Meta_value)
+		// }
 
 	}
 }
