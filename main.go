@@ -109,6 +109,30 @@ func GetPostbyName(db *sql.DB, post_name string) (int, error) {
 	return id, nil
 }
 
+func delete(db *sql.DB, post_id int) error {
+	query := "DELETE from wp_postmeta WHERE post_id = ?"
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	stmt, err := db.PrepareContext(ctx, query)
+	if err != nil {
+		log.Printf("Error %s when preparing SQL statement", err)
+		return err
+	}
+	defer stmt.Close()
+	res, err := stmt.ExecContext(ctx, post_id)
+	if err != nil {
+		log.Printf("Error %s when delete row into meta post table", err)
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("Error %s when finding rows affected", err)
+		return err
+	}
+	log.Printf("%d meta post deleted ", rows)
+	return nil
+}
+
 func insert(db *sql.DB, meta models.Meta) error {
 	query := "INSERT INTO wp_postmeta(post_id, meta_key, meta_value) VALUES (?, ?, ?)"
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -205,10 +229,7 @@ func main() {
 			if meta.Meta_key == "_thumbnail_id" {
 
 				var _thumbnail_id_ds, err = strconv.Atoi(post_meta_ds[key].Meta_value)
-				// log.Printf("thumbnail id ds %s", _thumbnail_id_ds)
 				thumbnails_ds, err := GetPostsMeta(db_ds, _thumbnail_id_ds)
-				// log.Printf("thumbnail src : %s", thumbnails_ds)
-				// fmt.Println("thumbnail src ", thumbnails_ds)
 
 				if err != nil {
 					log.Printf("thumbnail src %s Not found", post.Post_title)
@@ -223,6 +244,31 @@ func main() {
 
 					if len(thumbnails_ds) > 0 {
 						log.Printf("Meta Post %s already exist", post.Post_name)
+
+						// delete(db_ds, _thumbnail_id_ds)
+
+						// var _thumbnail_id_trikinet int
+						// for key, meta_trikinet := range post_meta_trikinet {
+						// 	if meta_trikinet.Meta_key == "_thumbnail_id" {
+						// 		_thumbnail_id_trikinet, err = strconv.Atoi(post_meta_trikinet[key].Meta_value)
+						// 	}
+						// }
+
+						// thumbnails_trikinet, err := GetPostsMeta(db_trikinet, _thumbnail_id_trikinet)
+
+						// for _, thumbnail_trikinet := range thumbnails_trikinet {
+						// 	data := models.Meta{
+						// 		Post_id:    int64(_thumbnail_id_ds),
+						// 		Meta_key:   thumbnail_trikinet.Meta_key,
+						// 		Meta_value: thumbnail_trikinet.Meta_value,
+						// 	}
+						// 	err = insert(db_ds, data)
+						// }
+
+						// if err != nil {
+						// 	log.Printf("Error %s when selecting post meta", err)
+						// 	return
+						// }
 					} else {
 						var _thumbnail_id_trikinet int
 						for key, meta_trikinet := range post_meta_trikinet {
